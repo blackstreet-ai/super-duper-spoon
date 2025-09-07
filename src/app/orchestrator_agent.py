@@ -1,4 +1,9 @@
 from agents import Agent
+import os
+try:
+    from agents import HostedMCPTool  # type: ignore
+except Exception:  # pragma: no cover
+    from agents.tools import HostedMCPTool  # type: ignore
 
 from tools.agent_tools import run_research_summarizer, run_script_drafter
 
@@ -11,6 +16,26 @@ def make_orchestrator() -> Agent:
     and updates Notion so the whole flow stays observable and recoverable.
 
     """
+    # Conditionally expose Notion Hosted MCP if configured
+    tools_list = [
+        run_research_summarizer,
+        run_script_drafter,
+    ]
+
+    notion_mcp_url = os.getenv("NOTION_MCP_URL")
+    if notion_mcp_url:
+        tools_list.append(
+            HostedMCPTool(
+                tool_config={
+                    "type": "mcp",
+                    "server_label": "notion",
+                    "server_url": notion_mcp_url,
+                    # set to "never" for initial automation; tighten later
+                    "require_approval": "never",
+                }
+            )
+        )
+
     return Agent(
         name="Orchestrator",
         instructions="""
@@ -22,9 +47,6 @@ def make_orchestrator() -> Agent:
         6.	Status & Logging: Update Notion fields (status → Ready for Review, sources_count, last_updated, links). Write an execution log with timestamps and decisions.
         7.	Finalize or Re-route: If guardrails fail, send the item back to the responsible agent with a structured correction note; else mark Done and notify.
         """,
-        tools=[
-            run_research_summarizer,
-            run_script_drafter,
-        ],
+        tools=tools_list,
         # handoffs=[],  # Wire specialist agents here in future iterations
     )
