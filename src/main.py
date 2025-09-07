@@ -12,8 +12,8 @@ def research_smoke() -> None:
     Prints the beginning of the Sources Register if present; otherwise prints the
     first few lines of the agent output. Use by setting RESEARCH_SMOKE=1.
     """
-    topic = "US labor market cooling signals in 2025"
-    time_window = "2024-01-01 to 2025-09-07"
+    topic = "NFL week one predictions"
+    time_window = "2025-09-01 to 2025-09-07"
     print("[Smoke] Running Research Summarizer...\n")
     parts = [
         f"Topic: {topic}",
