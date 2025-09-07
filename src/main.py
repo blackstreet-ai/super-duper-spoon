@@ -1,6 +1,8 @@
 import os
 from agents import Agent, Runner
 from dotenv import load_dotenv
+from agents import RunConfig
+from app.orchestrator_agent import make_orchestrator
 
 
 def main() -> None:
@@ -16,9 +18,14 @@ def main() -> None:
         )
         return
 
-    agent = Agent(name="Assistant", instructions="You are a helpful assistant")
-    result = Runner.run_sync(agent, "Write a haiku about recursion in programming.")
-    print(result.final_output)
+    # Use the Orchestrator Agent for the demo run
+    agent = make_orchestrator()
+    result = Runner.run_sync(
+        agent,
+        "Write a haiku about recursion in programming.",
+        run_config=RunConfig(workflow_name="Orchestrator Hello"),
+    )
+    print("\n\n" + result.final_output + "\n\n")
 
 
 if __name__ == "__main__":
