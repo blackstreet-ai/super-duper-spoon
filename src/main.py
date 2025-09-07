@@ -3,7 +3,7 @@ from agents import Agent, Runner
 from dotenv import load_dotenv
 from agents import RunConfig
 from app.orchestrator_agent import make_orchestrator
-from tools.agent_tools import run_research_summarizer
+from app.research_summarizer_agent import make_research_summarizer
 
 
 def research_smoke() -> None:
@@ -15,7 +15,20 @@ def research_smoke() -> None:
     topic = "US labor market cooling signals in 2025"
     time_window = "2024-01-01 to 2025-09-07"
     print("[Smoke] Running Research Summarizer...\n")
-    output = run_research_summarizer(topic=topic, time_window=time_window)
+    parts = [
+        f"Topic: {topic}",
+        f"Time Window: {time_window}",
+        (
+            "Task: Use your hosted MCP tools (web_search_exa, crawling) to find at least 2 "
+            "recent credible sources and list a 'Sources Register' section with numbered "
+            "entries in the format: Title - Outlet/Author - Date (YYYY-MM-DD) - URL - 1-liner relevance."
+        ),
+        "Be concise and ensure publish dates are included.",
+    ]
+    prompt = "\n\n".join(parts)
+    agent = make_research_summarizer()
+    result = Runner.run_sync(agent, prompt, run_config=RunConfig(workflow_name="Research Smoke"))
+    output = result.final_output
 
     # Try to locate the Sources Register section and print first ~10 entries/lines
     print("\n===== Research Summarizer Output (truncated) =====\n")
@@ -25,8 +38,8 @@ def research_smoke() -> None:
     if idx != -1:
         snippet = output[idx:]
     lines = snippet.splitlines()
-    # Print up to 30 lines to show early sources and structure
-    preview = "\n".join(lines[:30])
+    # Print up to 80 lines to show early sources and structure
+    preview = "\n".join(lines[:80])
     print(preview)
     print("\n===== End Preview =====\n")
 

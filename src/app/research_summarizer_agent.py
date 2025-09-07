@@ -34,9 +34,13 @@ def make_research_summarizer() -> Agent:
     if exa_api_key:
         exa_url = f"https://mcp.exa.ai/mcp?exaApiKey={exa_api_key}"
         exa_mcp = HostedMCPTool(
-            url=exa_url,
-            tool_filter=["web_search_exa", "crawling"],
-            name="exa",
+            tool_config={
+                "type": "mcp",
+                "server_label": "exa",
+                "server_url": exa_url,
+                # For initial smoke testing, auto-approve. Tighten later if desired.
+                "require_approval": "never",
+            }
         )
         tools_list.append(exa_mcp)
 
