@@ -25,7 +25,7 @@ def main() -> None:
         "Write a haiku about recursion in programming.",
         run_config=RunConfig(workflow_name="Orchestrator Hello"),
     )
-    print(result.final_output)
+    print("\n\n" + result.final_output + "\n\n")
 
 
 if __name__ == "__main__":
