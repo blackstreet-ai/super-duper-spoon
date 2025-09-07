@@ -1,5 +1,13 @@
 from agents import Agent
 
+import os
+try:
+    # Prefer top-level import if available in current SDK version
+    from agents import HostedMCPTool  # type: ignore
+except Exception:  # pragma: no cover - fallback for older SDK layout
+    # Fallback to submodule path for compatibility
+    from agents.tools import HostedMCPTool  # type: ignore
+
 
 def make_research_summarizer() -> Agent:
     """
@@ -20,6 +28,18 @@ def make_research_summarizer() -> Agent:
       time_window or adjacent queries) and try again. If still <5, return
       status: Needs Input with exactly what is missing.
     """
+    # Wire Exa Hosted MCP (web search + crawling) if EXA_API_KEY is present
+    exa_api_key = os.getenv("EXA_API_KEY")
+    tools_list = []
+    if exa_api_key:
+        exa_url = f"https://mcp.exa.ai/mcp?exaApiKey={exa_api_key}"
+        exa_mcp = HostedMCPTool(
+            url=exa_url,
+            tool_filter=["web_search_exa", "crawling"],
+            name="exa",
+        )
+        tools_list.append(exa_mcp)
+
     return Agent(
         name="Research Summarizer",
         instructions=
@@ -73,6 +93,6 @@ def make_research_summarizer() -> Agent:
         - If fewer than 5 credible sources after one scope expansion, emit Needs Input with a one-paragraph blocker note.
 
         """,
-        # tools=[],  # Add research/search tools later
+        tools=tools_list,
         # handoffs=[],
     )
