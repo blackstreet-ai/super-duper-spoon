@@ -7,6 +7,7 @@ try:
 except Exception:  # pragma: no cover - fallback for older SDK layout
     # Fallback to submodule path for compatibility
     from agents.tools import HostedMCPTool  # type: ignore
+from tools.file_tools import save_markdown
 
 
 def make_research_summarizer() -> Agent:
@@ -43,6 +44,9 @@ def make_research_summarizer() -> Agent:
             }
         )
         tools_list.append(exa_mcp)
+
+    # Always expose local save_markdown tool for persisting artifacts
+    tools_list.append(save_markdown)
 
     return Agent(
         name="Research Summarizer",
