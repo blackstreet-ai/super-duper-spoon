@@ -3,6 +3,7 @@ from typing import List, Optional
 from agents import Runner, function_tool
 from app.research_summarizer_agent import make_research_summarizer
 from app.script_drafter_agent import make_script_drafter
+from pathlib import Path
 
 @function_tool
 def run_research_summarizer(
@@ -46,6 +47,32 @@ def run_research_summarizer(
 
     result = Runner.run_sync(agent, prompt)
     return result.final_output
+
+@function_tool
+def save_markdown(path: str, contents: str, overwrite: bool = False) -> str:
+    """
+    Save Markdown contents to the given file path, creating parent directories as needed.
+
+    Args:
+        path: Relative or absolute file path. If it doesn't end with `.md`, the extension will be added.
+        contents: Markdown text to write.
+        overwrite: When False (default), raises an error if the file already exists.
+
+    Returns:
+        The absolute path to the written Markdown file as a string.
+    """
+    target = Path(path)
+    if target.suffix.lower() != ".md":
+        target = target.with_suffix(".md")
+
+    target = target.resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if target.exists() and not overwrite:
+        raise FileExistsError(f"File already exists: {target}")
+
+    target.write_text(contents, encoding="utf-8")
+    return str(target)
 
 @function_tool
 def run_script_drafter(

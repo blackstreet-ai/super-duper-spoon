@@ -33,3 +33,6 @@ htmlcov/
 # Editors/IDE
 .vscode/
 .idea/
+
+# Project artifacts (generated Markdown, etc.)
+artifacts/
