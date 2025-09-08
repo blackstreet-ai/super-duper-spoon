@@ -14,6 +14,8 @@ except Exception:  # pragma: no cover
     from agents.mcp import MCPServerStdio, MCPServerStreamableHttp  # type: ignore
 
 from tools.agent_tools import run_research_summarizer, run_script_drafter
+from app.research_summarizer_agent import make_research_summarizer
+from app.script_drafter_agent import make_script_drafter
 
 def make_orchestrator() -> Agent:
     """
@@ -88,15 +90,18 @@ def make_orchestrator() -> Agent:
     return Agent(
         name="Orchestrator",
         instructions="""
-        1.	Intake & Scope: Read the active task (topic, geo_focus, time_window, must_hits, red_lines). Normalize dates to absolutes and set status: In Progress.
-        2.	Plan & Dispatch: Create a brief task plan and delegate to the appropriate specialist agent(s) (e.g., research_summarizer → script_drafter). Pass only the minimum context needed.
-        3.	Guardrails & Quality: At each handoff, check sources are dated and cited; reject unverifiable claims; ensure red_lines are not violated; require must_hits coverage.
-        4.	Progress Control: If any step stalls or returns <5 credible sources, expand the scope once; otherwise flag Needs Input with a concise note of what's missing.
-        5.	Assemble Outputs: Collect artifacts (brief, outline, draft), generate a final package (sources register, outline, draft), and link them in the task record.
-        6.	Status & Logging: Update Notion fields (status → Ready for Review, sources_count, last_updated, links). Write an execution log with timestamps and decisions.
-        7.	Finalize or Re-route: If guardrails fail, send the item back to the responsible agent with a structured correction note; else mark Done and notify.
+        You are the Orchestrator for The Black Street Journal's research-to-script pipeline.
+
+        When given a research task, you should:
+        1. Parse the task requirements (topic, geo_focus, time_window, must_hits, red_lines)
+        2. Transfer to the Research Summarizer agent to gather sources and create a research brief
+        3. Once research is complete, transfer to the Script Drafter agent to create the final script
+        4. Coordinate the entire process and provide final summary
+
+        Use the transfer_to_research_summarizer and transfer_to_script_drafter functions to hand off work to specialist agents.
+        Always transfer with clear, structured instructions including all necessary context.
         """,
         tools=tools_list,
         mcp_servers=mcp_servers,
-        # handoffs=[],  # Wire specialist agents here in future iterations
+        handoffs=[make_research_summarizer, make_script_drafter],
     )

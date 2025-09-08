@@ -5,6 +5,8 @@ from agents import RunConfig
 from app.orchestrator_agent import make_orchestrator
 from app.research_summarizer_agent import make_research_summarizer
 from datetime import datetime
+import asyncio
+from tools.mcp_health import run_all_health_checks, format_health_report, get_mcp_recommendations
 
 
 def research_smoke() -> None:
@@ -118,6 +120,74 @@ def notion_smoke() -> None:
     print("\n===== End Preview =====\n")
 
 
+def end_to_end_test() -> None:
+    """
+    Comprehensive end-to-end test of the research-to-script pipeline using handoffs.
+    Tests the complete flow: Orchestrator -> Research Summarizer -> Script Drafter.
+    Use by setting E2E_TEST=1.
+    """
+    print("[E2E Test] Running complete research-to-script pipeline with handoffs...\n")
+    
+    # Create a realistic news topic for testing
+    topic = "Federal Reserve Interest Rate Decision Impact on Housing Market"
+    prompt = f"""
+    I need you to coordinate a complete research-to-script pipeline for The Black Street Journal.
+    
+    Topic: {topic}
+    Geo Focus: United States
+    Time Window: 2024-01-01 to 2025-09-07
+    Must-Hits:
+    - Current Fed funds rate and recent changes
+    - Housing market metrics (prices, sales volume, mortgage rates)
+    - Regional variations in impact
+    
+    Red Lines:
+    - No speculation about future Fed decisions
+    - No investment advice
+    
+    Please:
+    1. First, hand off to the Research Summarizer to gather sources and create a research brief
+    2. Then, hand off to the Script Drafter to create a final script
+    3. Coordinate the entire process and provide a final summary
+    
+    Use handoffs between agents rather than function tools for this workflow.
+    """
+    
+    agent = make_orchestrator()
+    result = Runner.run_sync(
+        agent, 
+        prompt, 
+        run_config=RunConfig(workflow_name="E2E Research-to-Script Pipeline"),
+        max_turns=10  # Allow multiple handoffs
+    )
+    
+    print("\n===== End-to-End Pipeline Result =====\n")
+    print(result.final_output)
+    print("\n===== End E2E Test =====\n")
+
+
+def mcp_health_check() -> None:
+    """
+    Run comprehensive MCP health checks and provide recommendations.
+    Use by setting MCP_HEALTH=1.
+    """
+    print("[Health Check] Running MCP server health checks...\n")
+    
+    try:
+        checks = asyncio.run(run_all_health_checks())
+        report = format_health_report(checks)
+        recommendations = get_mcp_recommendations(checks)
+        
+        print(report)
+        print("=== Recommendations ===")
+        for rec in recommendations:
+            print(f"• {rec}")
+        print()
+        
+    except Exception as e:
+        print(f"Health check failed: {e}")
+
+
 def main() -> None:
     # Load environment variables from .env if present
     load_dotenv()
@@ -129,6 +199,16 @@ def main() -> None:
             "- Copy .env.example to .env\n"
             "- Set OPENAI_API_KEY=sk-... in .env, then re-run: .venv/bin/python src/main.py"
         )
+        return
+
+    # MCP health check mode: set MCP_HEALTH=1 to check all MCP connections
+    if os.getenv("MCP_HEALTH") == "1":
+        mcp_health_check()
+        return
+
+    # End-to-end test mode: set E2E_TEST=1 to run complete pipeline
+    if os.getenv("E2E_TEST") == "1":
+        end_to_end_test()
         return
 
     # Research smoke mode: set RESEARCH_SMOKE=1 to run the research tool directly
