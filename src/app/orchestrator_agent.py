@@ -5,6 +5,13 @@ try:
 except Exception:  # pragma: no cover
     from agents.tools import HostedMCPTool  # type: ignore
 
+try:
+    # Prefer direct import path for MCP servers
+    from agents.mcp.server import MCPServerStdio, MCPServerStreamableHttp  # type: ignore
+except Exception:  # pragma: no cover
+    # Fallback older layout
+    from agents.mcp import MCPServerStdio, MCPServerStreamableHttp  # type: ignore
+
 from tools.agent_tools import run_research_summarizer, run_script_drafter
 
 def make_orchestrator() -> Agent:
@@ -16,25 +23,58 @@ def make_orchestrator() -> Agent:
     and updates Notion so the whole flow stays observable and recoverable.
 
     """
-    # Conditionally expose Notion Hosted MCP if configured
+    # Function tools available to the Orchestrator
     tools_list = [
         run_research_summarizer,
         run_script_drafter,
     ]
 
-    notion_mcp_url = os.getenv("NOTION_MCP_URL")
-    if notion_mcp_url:
-        tools_list.append(
-            HostedMCPTool(
-                tool_config={
-                    "type": "mcp",
-                    "server_label": "notion",
-                    "server_url": notion_mcp_url,
-                    # set to "never" for initial automation; tighten later
-                    "require_approval": "never",
-                }
+    # Configure Notion MCP server (prefer stdio using the official makenotion/notion-mcp-server)
+    mcp_servers = []
+
+    notion_token = os.getenv("NOTION_TOKEN")
+    if notion_token:
+        # STDIO transport (local subprocess) using @notionhq/notion-mcp-server
+        mcp_servers.append(
+            MCPServerStdio(
+                params={
+                    "command": "npx",
+                    "args": ["-y", "@notionhq/notion-mcp-server"],
+                    "env": {"NOTION_TOKEN": notion_token},
+                },
+                name="notion-stdio",
+                cache_tools_list=True,
             )
         )
+
+    # Optional: allow hosted/HTTP transport if explicitly configured
+    notion_mcp_url = os.getenv("NOTION_MCP_URL")
+    notion_auth = os.getenv("NOTION_MCP_AUTH_TOKEN")
+    if notion_mcp_url:
+        # If user insists on hosted tool style, also expose HostedMCPTool; otherwise prefer MCPServerStreamableHttp
+        if os.getenv("NOTION_MCP_USE_HOSTED_TOOL") == "1":
+            tools_list.append(
+                HostedMCPTool(
+                    tool_config={
+                        "type": "mcp",
+                        "server_label": "notion",
+                        "server_url": notion_mcp_url,
+                        "require_approval": "never",
+                    }
+                )
+            )
+        else:
+            mcp_servers.append(
+                MCPServerStreamableHttp(
+                    params={
+                        "url": notion_mcp_url,
+                        # Header-style auth if provided by the server
+                        "headers": {"Authorization": f"Bearer {notion_auth}"} if notion_auth else {},
+                    },
+                    name="notion-http",
+                    cache_tools_list=True,
+                )
+            )
 
     return Agent(
         name="Orchestrator",
@@ -48,5 +88,6 @@ def make_orchestrator() -> Agent:
         7.	Finalize or Re-route: If guardrails fail, send the item back to the responsible agent with a structured correction note; else mark Done and notify.
         """,
         tools=tools_list,
+        mcp_servers=mcp_servers,
         # handoffs=[],  # Wire specialist agents here in future iterations
     )
