@@ -47,10 +47,10 @@ def make_orchestrator() -> Agent:
         )
         try:
             asyncio.get_event_loop().run_until_complete(stdio_server.connect())
-            print("[Notion MCP] Connected via stdio (npx @notionhq/notion-mcp-server)")
+            print("\n[Notion MCP] Connected via stdio (npx @notionhq/notion-mcp-server)\n")
             mcp_servers.append(stdio_server)
         except Exception as e:
-            print(f"[Notion MCP stdio] Preflight connect failed: {e}. Continuing without stdio server.")
+            print(f"\n[Notion MCP stdio] Preflight connect failed: {e}. Continuing without stdio server.\n")
 
     # Optional: allow hosted/HTTP transport if explicitly configured
     notion_mcp_url = os.getenv("NOTION_MCP_URL")
@@ -80,10 +80,10 @@ def make_orchestrator() -> Agent:
             )
             try:
                 asyncio.get_event_loop().run_until_complete(http_server.connect())
-                print(f"[Notion MCP] Connected via HTTP at {notion_mcp_url}")
+                print(f"\n[Notion MCP] Connected via HTTP at {notion_mcp_url}\n")
                 mcp_servers.append(http_server)
             except Exception as e:
-                print(f"[Notion MCP http] Preflight connect failed: {e}. Continuing without http server.")
+                print(f"\n[Notion MCP http] Preflight connect failed: {e}. Continuing without http server.")
 
     return Agent(
         name="Orchestrator",

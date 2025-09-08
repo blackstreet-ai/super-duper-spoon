@@ -101,7 +101,7 @@ def notion_smoke() -> None:
                 mcp_servers=[server],
             )
         except Exception as e:
-            print(f"[Smoke] Failed to prepare HTTP Notion MCP server: {e}")
+            print(f"\n[Smoke] Failed to prepare HTTP Notion MCP server: {e}\n")
             agent = make_orchestrator()
     else:
         agent = make_orchestrator()
@@ -148,7 +148,7 @@ def main() -> None:
         "Write a haiku about recursion in programming.",
         run_config=RunConfig(workflow_name="Orchestrator Hello"),
     )
-    print("\n\n" + result.final_output + "\n\n")
+    print("\n" + result.final_output + "\n")
 
 
 if __name__ == "__main__":
