@@ -1,5 +1,6 @@
 from agents import Agent
 import os
+import asyncio
 try:
     from agents import HostedMCPTool  # type: ignore
 except Exception:  # pragma: no cover
@@ -29,23 +30,26 @@ def make_orchestrator() -> Agent:
         run_script_drafter,
     ]
 
-    # Configure Notion MCP server (prefer stdio using the official makenotion/notion-mcp-server)
+    # Configure Notion MCP server(s); preflight connect to avoid runtime init errors
     mcp_servers = []
 
     notion_token = os.getenv("NOTION_TOKEN")
     if notion_token:
         # STDIO transport (local subprocess) using @notionhq/notion-mcp-server
-        mcp_servers.append(
-            MCPServerStdio(
-                params={
-                    "command": "npx",
-                    "args": ["-y", "@notionhq/notion-mcp-server"],
-                    "env": {"NOTION_TOKEN": notion_token},
-                },
-                name="notion-stdio",
-                cache_tools_list=True,
-            )
+        stdio_server = MCPServerStdio(
+            params={
+                "command": "npx",
+                "args": ["-y", "@notionhq/notion-mcp-server"],
+                "env": {"NOTION_TOKEN": notion_token},
+            },
+            name="notion-stdio",
+            cache_tools_list=True,
         )
+        try:
+            asyncio.get_event_loop().run_until_complete(stdio_server.connect())
+            mcp_servers.append(stdio_server)
+        except Exception as e:
+            print(f"[Notion MCP stdio] Preflight connect failed: {e}. Continuing without stdio server.")
 
     # Optional: allow hosted/HTTP transport if explicitly configured
     notion_mcp_url = os.getenv("NOTION_MCP_URL")
@@ -64,17 +68,20 @@ def make_orchestrator() -> Agent:
                 )
             )
         else:
-            mcp_servers.append(
-                MCPServerStreamableHttp(
-                    params={
-                        "url": notion_mcp_url,
-                        # Header-style auth if provided by the server
-                        "headers": {"Authorization": f"Bearer {notion_auth}"} if notion_auth else {},
-                    },
-                    name="notion-http",
-                    cache_tools_list=True,
-                )
+            http_server = MCPServerStreamableHttp(
+                params={
+                    "url": notion_mcp_url,
+                    # Header-style auth if provided by the server
+                    "headers": {"Authorization": f"Bearer {notion_auth}"} if notion_auth else {},
+                },
+                name="notion-http",
+                cache_tools_list=True,
             )
+            try:
+                asyncio.get_event_loop().run_until_complete(http_server.connect())
+                mcp_servers.append(http_server)
+            except Exception as e:
+                print(f"[Notion MCP http] Preflight connect failed: {e}. Continuing without http server.")
 
     return Agent(
         name="Orchestrator",
