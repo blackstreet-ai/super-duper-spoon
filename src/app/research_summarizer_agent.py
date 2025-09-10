@@ -102,5 +102,5 @@ def make_research_summarizer() -> Agent:
 
         """,
         tools=tools_list,
-        # handoffs=[],
+        handoffs=[],  # Research Summarizer is a leaf node - no further handoffs
     )

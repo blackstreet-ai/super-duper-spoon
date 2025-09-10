@@ -1,4 +1,5 @@
 from agents import Agent
+from tools.file_tools import save_markdown
 
 
 def make_script_drafter() -> Agent:
@@ -79,6 +80,6 @@ def make_script_drafter() -> Agent:
         - Return word_count, sections_durations, sources_used.
         - If evidence gaps block a safe draft, emit Needs Input with a one-paragraph blocker note.
         """,
-        # tools=[],  # Add formatting or style tools later
-        # handoffs=[],
+        tools=[save_markdown],  # Enable saving script outputs to markdown
+        handoffs=[],  # Script Drafter is a leaf node - no further handoffs
     )

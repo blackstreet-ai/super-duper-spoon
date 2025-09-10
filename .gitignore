@@ -36,3 +36,6 @@ htmlcov/
 
 # Project artifacts (generated Markdown, etc.)
 artifacts/
+
+# Windsurf
+.windsurf/
